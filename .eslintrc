@@ -1,0 +1,13 @@
+{
+  "extends": ["standard"], 
+
+  "rules": {
+    "indent": ["error", 4],
+    "camelcase": "warn",
+    "padded-blocks": "off",
+    "no-unused-vars": "warn",
+    "new-cap": "warn",
+    "no-floating-decimal": "off"
+  }
+
+}
