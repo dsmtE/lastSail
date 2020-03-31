@@ -37,10 +37,4 @@ export default class Cloud {
             this.mesh.add(m)
         }
     }
-
-    move (delta) {
-        this.mesh.position.z -= delta * 100
-        this.mesh.rotation.y += delta * Math.random() * Math.PI / 10
-        this.mesh.rotation.z += delta * Math.random() * Math.PI / 10
-    }
 }

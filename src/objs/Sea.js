@@ -1,21 +1,24 @@
 import * as THREE from 'three'
+import SimplexNoise from 'simplex-noise'
 import Colors from '../Colors'
 
 export default class Sea {
     constructor () {
-        this.geometry = new THREE.PlaneGeometry(3000, 2000, 20, 100)
+        this.size = { w: 3000, h: 2000 }
+        this.resolution = { w: 100, h: 200 }
+        this.geometry = new THREE.PlaneGeometry(this.size.w - 1, this.size.h - 1, this.resolution.w, this.resolution.h)
+        this.geometry.translate(0.5, 0, 0)
         this.geometry.rotateX(-Math.PI / 2)
-        this.geometry.translate(0, 0, 800)
         this.geometry.dynamic = true
         // this.geometry.mergeVertices()
 
-        this.waves = [] // create an array to store new data associated to each vertex
+        this.simplex = new SimplexNoise(Math.random())
+        this.offset = 0 // offset used to move waves forward
+        this.waves = [] // store data associated to each vertex for waves movements
 
-        for (var i = 0; i < this.geometry.vertices.length; i++) {
-            // get each vertex
-            var v = this.geometry.vertices[i]
+        for (let vId = 0; vId < this.geometry.vertices.length; vId++) {
+            const v = this.geometry.vertices[vId]
 
-            // store some data associated to it
             this.waves.push({
                 y: v.y,
                 x: v.x,
@@ -26,8 +29,7 @@ export default class Sea {
             })
         }
 
-        // create the material
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshPhongMaterial({ // create the material
             color: Colors.blue,
             transparent: true,
             opacity: .8,
@@ -35,21 +37,24 @@ export default class Sea {
         })
 
         this.mesh = new THREE.Mesh(this.geometry, mat)
+        this.mesh.translateZ(this.size.h / 2.5)
         this.mesh.receiveShadow = true
     }
 
-    moveWaves (delta) {
-        const vertices = this.mesh.geometry.vertices
+    moveWaves (delta, time, gameSpeed) {
 
-        for (let i = 0; i < vertices.length; i++) {
-            const v = vertices[i]
-            const vprops = this.waves[i]
-            v.x = vprops.x + Math.cos(vprops.ang) * vprops.amp
-            v.y = vprops.y + Math.sin(vprops.ang) * vprops.amp
-            vprops.ang = (vprops.ang + vprops.speed * delta) % (2 * Math.PI)
+        const vertices = this.mesh.geometry.vertices
+        for (let vId = 0; vId < vertices.length; vId++) {
+
+            const i = vId % (this.resolution.w + 1)
+            const j = Math.floor(vId / (this.resolution.h + 1))
+            const v = vertices[vId]
+            const w = this.waves[vId]
+            v.x = w.x + Math.cos(w.ang)
+            v.y = w.y + this.simplex.noise2D(w.x / 250, (w.z / 100 + this.offset)) * (10 + 3 * Math.sin(Math.PI * time / 6.1))
+            w.ang = (w.ang + w.speed * delta) % (2 * Math.PI)
+            this.offset += delta * gameSpeed / 1000000
         }
         this.mesh.geometry.verticesNeedUpdate = true
-
     }
-
 }

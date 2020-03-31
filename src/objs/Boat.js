@@ -1,12 +1,11 @@
 import * as THREE from 'three'
 import Colors from '../Colors'
+import { boundValue } from '../useful'
 
 const maxDirAngle = Math.PI / 4
-const maxXpos = 150
-
 export default class Boat {
 
-    constructor () {
+    constructor (maxBoatpos) {
 
         this.mesh = new THREE.Object3D()
 
@@ -27,21 +26,30 @@ export default class Boat {
         boatmast.receiveShadow = true
         this.mesh.add(boatmast)
 
+        // calc bounding box
+        this.boundingBox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3())
+        this.boundingBox.setFromObject(this.mesh)
+
         this.velocity = 10
         this.dirAngle = 0
+        this.maxBoatpos = maxBoatpos
     }
 
     increaseMovement (deltaAngle) {
-        this.dirAngle = Math.max(Math.min(this.dirAngle + deltaAngle, maxDirAngle), -maxDirAngle)
+        this.dirAngle = boundValue(this.dirAngle + deltaAngle, -maxDirAngle, maxDirAngle)
     }
 
     updateMovement (delta) {
-        this.mesh.position.x = Math.max(Math.min(this.mesh.position.x + delta * 100 * Math.sin(this.dirAngle), maxXpos), -maxXpos)
+        this.mesh.position.x = boundValue(this.mesh.position.x + delta * 100 * Math.sin(this.dirAngle), -this.maxBoatpos, this.maxBoatpos)
         this.dirAngle *= 0.97
         this.updateModel()
     }
 
     updateModel () {
-        this.mesh.rotation.y = this.dirAngle / 10
+        this.mesh.rotation.y = this.dirAngle / 8
+    }
+
+    getBoundingBox () {
+        return this.boundingBox.clone().translate(this.mesh.position)
     }
 }

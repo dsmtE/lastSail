@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/dsmtE/lastSail#readme",
   "dependencies": {
+    "simplex-noise": "^2.4.0",
     "stats-js": "^1.0.1",
     "three": "^0.115.0",
     "webpack": "^4.42.1",

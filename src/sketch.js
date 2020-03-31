@@ -6,15 +6,18 @@ import Stats from 'stats-js'
 import Boat from './objs/Boat'
 import Sky from './objs/Sky'
 import Sea from './objs/Sea'
+import RocksHandler from './objs/RocksHandler'
 
 // other
 import { isKeyDown } from './keyboardHandler'
+import { normalize } from './useful'
 
 // variables
-let stats
+let gameState
+let statsGui
 let scene, camera, renderer, clock, container, height, width
 let hemisphereLight, shadowLight, ambientLight
-let sea, boat, sky
+let sea, sky, rocksHandler
 let mousePos = { x: 0, y: 0 }
 
 window.addEventListener('load', init)
@@ -23,22 +26,39 @@ function init () {
     console.log('----- init -----')
 
     // init stats-js
-    stats = new Stats()
-    stats.showPanel(1) // 0: fps, 1: ms, 2: mb, 3+: custom
-    document.body.appendChild(stats.dom)
+    statsGui = new Stats()
+    statsGui.showPanel(0)
+    document.body.appendChild(statsGui.dom)
 
-    clock = new THREE.Clock()
+    clock = new THREE.Clock() // used tu get timeStamp and deltaTime
 
     createScene() // set up the scene, the camera and the renderer
+
+    // init gameState variable
+    gameState = {
+        distance: 0,
+        score: 0,
+        ratioDistance: 1,
+        maxBoatpos: 200,
+        speed: 50,
+        seaWidth: 600,
+        seaLength: 800,
+        seaLevel: -5,
+        wavesAmp: 5,
+        SpawnPos: 800,
+        rockDistanceTolerance: 30,
+        CameraTargetPos: 0,
+        CamMoveSensivity: 1
+    }
+    gameState.boat = createBoat()
     createLights() // add the lights
 
-    // add the objects
-    createBoat()
+    // add game objects
     createSea()
     createSky()
+    initRocksHandler()
 
     // add event listener
-    // window.addEventListener('keydown', handleKeyDown, false)
     window.addEventListener('resize', handleWindowResize, false)
     document.addEventListener('mousemove', handleMouseMove, false)
 
@@ -82,7 +102,6 @@ function createScene () {
     // Add the DOM element of the renderer to the containerL
     container = document.getElementById('container')
     container.appendChild(renderer.domElement)
-
 }
 
 function handleWindowResize () {
@@ -120,8 +139,8 @@ function createLights () {
 
     // define the resolution of the shadow the higher the better,
     // but also the more expensive and less performant
-    shadowLight.shadow.mapSize.width = 2048
-    shadowLight.shadow.mapSize.height = 2048
+    shadowLight.shadow.mapSize.width = 1024
+    shadowLight.shadow.mapSize.height = 1024
 
     ambientLight = new THREE.AmbientLight(0xdc8874, .3) // an ambient light modifies the global color of a scene and makes the shadows softer
 
@@ -131,71 +150,70 @@ function createLights () {
     scene.add(ambientLight)
 }
 
-// Instantiate the sea and add it to the scene:
-
 function createSea () {
     sea = new Sea()
-    sea.mesh.position.y = 0
-
-    // add the mesh of the sea to the scene
-    scene.add(sea.mesh)
-
+    sea.mesh.position.y = gameState.seaLevel
+    scene.add(sea.mesh) // add the mesh of the sea to the scene
 }
 
 function createSky () {
-    sky = new Sky()
+    sky = new Sky(8, gameState.SpawnPos)
     scene.add(sky.mesh)
 }
 
 function createBoat () {
-    boat = new Boat()
+    const boat = new Boat(gameState.maxBoatpos)
     boat.mesh.position.z = 20
     scene.add(boat.mesh)
+    return boat
+}
+
+function initRocksHandler () {
+    rocksHandler = new RocksHandler(10, gameState.SpawnPos, gameState.rockDistanceTolerance)
+    scene.add(rocksHandler.mesh)
 }
 
 function loop () {
-    stats.begin()
+    statsGui.begin()
 
     update()
     renderer.render(scene, camera) // render the scene
 
     window.requestAnimationFrame(loop) // call the loop function again
-    stats.end()
+    statsGui.end()
 }
 
 function update () {
 
     const delta = clock.getDelta()
-    // const time = clock.getElapsedTime() * 10
+    const time = clock.getElapsedTime()
 
     if (isKeyDown('ArrowLeft')) {
-        boat.increaseMovement(delta * Math.PI * 4)
+        gameState.boat.increaseMovement(delta * Math.PI * 4)
     } else if (isKeyDown('ArrowRight')) {
-        boat.increaseMovement(delta * -Math.PI * 4)
+        gameState.boat.increaseMovement(delta * -Math.PI * 4)
     }
 
-    sea.moveWaves(delta)
-    boat.updateMovement(delta)
-    sky.update(delta, boat)
+    gameState.boat.updateMovement(delta)
+    sea.moveWaves(delta, time, gameState.speed)
+    sky.update(delta, gameState.speed)
+    rocksHandler.update(delta, gameState.speed, gameState.boat)
+    updateDistance()
+    updateCamera(delta)
 }
 
-// user event
-// function handleKeyDown (event) {
+function updateDistance (delta) {
+    gameState.distance += gameState.speed * delta * gameState.ratioDistance
+    // fieldDistance.innerHTML = Math.floor(game.distance)
+}
 
-//     switch (event.key) {
-//     case 'ArrowLeft':
-//         // console.log('left')
-//         boat.increaseMovement(clock.getDelta() * Math.PI * 4)
-//         break
-//     case 'ArrowRight':
-//         boat.increaseMovement(clock.getDelta() * -Math.PI * 4)
-//         break
-//     default:
-//         console.log('key unknown: ' + event.key)
-//         break
-//     }
-// }
+function updateCamera (delta) {
+    camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameState.CamMoveSensivity
+    camera.fov = normalize(mousePos.y, -1, 1, 85, 100)
+    camera.updateProjectionMatrix()
+}
 
 function handleMouseMove (event) {
     mousePos = { x: -1 + (event.clientX / width) * 2, y: 1 - (event.clientY / height) * 2 }
+    gameState.CameraTargetPos = normalize(mousePos.x, -1, 1, -50, 50)
 }
