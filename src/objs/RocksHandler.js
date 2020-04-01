@@ -30,12 +30,12 @@ class Rock {
 }
 
 export default class RocksHandler {
-    constructor (nbRocksInPool, spawnPos, rockDistanceTolerance) {
+    constructor (nbRocksInPool, gameState) {
         this.mesh = new THREE.Object3D()
         this.activeRocks = []
         this.Rockspool = []
-        this.spawnPos = spawnPos
-        this.rockDistanceTolerance = rockDistanceTolerance
+        this.spawnPos = gameState.spawnPos
+        this.rockDistanceTolerance = gameState.rockDistanceTolerance
         for (let i = 0; i < nbRocksInPool; i++) {
             this.Rockspool.push(new Rock())
         }
@@ -55,23 +55,11 @@ export default class RocksHandler {
         }
     }
 
-    checkCollision (rock, index, boat) {
-        // const dist = boat.mesh.position.clone().sub(rock.mesh.position.clone())
-        // if (dist.length() < this.rockDistanceTolerance) {
-        if (rock.getBoundingBox().intersectsBox(boat.getBoundingBox())) {
-            this.mesh.remove(rock.mesh)
-            this.Rockspool.push(this.activeRocks.splice(index, 1)[0])
-            // emmit particles
-            // reduce score
-            console.log('rock hit')
-        }
-    }
-
-    update (delta, gameSpeed, boat) {
+    update (delta, gameState) {
         for (let i = 0; i < this.activeRocks.length; i++) { // for each rock
             const r = this.activeRocks[i]
             // move rock
-            r.mesh.position.z -= delta * gameSpeed
+            r.mesh.position.z -= delta * gameState.speed
 
             if (r.mesh.position.z < -200) {
                 this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
@@ -79,7 +67,13 @@ export default class RocksHandler {
                 break
             }
 
-            this.checkCollision(r, i, boat)
+            if (r.getBoundingBox().intersectsBox(gameState.boat.getBoundingBox())) {
+                this.mesh.remove(r.mesh)
+                this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
+                // emmit particles
+                gameState.fuel = Math.max(0, gameState.fuel - 15) // reduce fuel
+                console.log('rock hit')
+            }
         }
 
         // spawn new rocks randomly

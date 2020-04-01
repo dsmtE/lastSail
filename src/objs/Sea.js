@@ -46,8 +46,6 @@ export default class Sea {
         const vertices = this.mesh.geometry.vertices
         for (let vId = 0; vId < vertices.length; vId++) {
 
-            const i = vId % (this.resolution.w + 1)
-            const j = Math.floor(vId / (this.resolution.h + 1))
             const v = vertices[vId]
             const w = this.waves[vId]
             v.x = w.x + Math.cos(w.ang)

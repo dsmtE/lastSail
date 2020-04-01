@@ -1,0 +1,121 @@
+body {
+    padding: 0; margin: 0;
+}
+
+#container {
+	position: absolute; 
+	width: 100%; 
+	height: 100%; 
+	overflow: hidden;
+	background: #f7d9aa 
+}
+
+.header {
+	position: absolute;
+	top: 8vh;
+	left: 0;
+	width: 100%;
+	text-align: center;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.header > h1 {
+	font-family: 'Playfair Display';
+	font-size: 4.5em;
+	line-height: 1;
+	margin: 0;
+	letter-spacing: -0.025em;
+	color:  #aa9576;
+}
+
+.header > h1 > span {
+	font-size: 0.6em;
+	font-style: italic;
+	display: block;
+	margin: 0 0 -0.4em -3em;
+	letter-spacing: 0px;
+}
+
+.header > h2 {
+	font-size: 0.7em;
+	margin: 0.25em 0;
+	white-space: nowrap;
+	text-indent: 1em;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: #ad4d30cc;
+}
+
+
+.scoreDisplay {
+	width: 100%;
+	margin: 2em 0 0;
+	text-align: center;
+    white-space: nowrap;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.scoreBlock {
+	position: relative;
+	display: inline-block;
+	padding: 0.5em 1em;
+	vertical-align: top;
+}
+
+.scoreLabel {
+	position: relative;
+	margin: 0 0 0.4em 0;
+	text-align: center;
+	color: #cab28d;
+	font-size: 1em;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	text-decoration: underline;
+	text-underline-position: under;
+	text-decoration-style: double;
+}
+
+.scoreValue {
+	font-family: 'Playfair Display';
+	font-weight: bold;
+	color: #cab28d;
+}
+
+#distanceValue {
+	font-size: 30px;
+}
+
+.fuelBar {
+	margin: 2px;
+	animation-duration: 150ms;
+	position: relative;
+	width: 100px;
+	height: 0.4em;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #cab28d;
+	border: 1px solid #cab28d;
+	
+}
+
+#fuelBarprogress {
+    display: block;
+    width: 50%;
+    height: 100%;
+    background-color: #68c3c0;
+}
+
+@media screen and (max-width: 40em) {
+	.header {
+		font-size: 0.75em;
+		top: 6.5em;
+	}
+	.header h2 {
+		letter-spacing: 0.65em;
+	}
+}

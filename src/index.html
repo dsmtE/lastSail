@@ -3,23 +3,22 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>lastSail</title>
+    <title>The Last Sail</title>
     <link href='https://fonts.googleapis.com/css?family=Playfair+Display:400,700,700italic' rel='stylesheet' type='text/css'>
     <script type="text/javascript" src="bundle.js"></script>
-
-    <style> 
-        body {padding: 0; margin: 0;} 
-        /* canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }  */
-        #container { position: absolute; width: 100%; height: 100%; overflow: hidden; background:  #f7d9aa }
-    </style>
 </head>
 <body>
     <div class="header">
-        <h1><span>the</span>The Last Sail</h1>
+        <h1><span>the</span>Last Sail</h1>
         <h2>Reach the limits of the ocean</h2>
-        <div class="distance" id="distance">
-                <div class="distanceLabel">distance</div>
-                <div class="distanceValue" id="distValue">000</div>
+        <div class="scoreDisplay">  
+            <div class="scoreBlock">
+                <div class="scoreLabel distanceLabel">distance</div>
+                <div class="scoreValue" id="distanceValue">000</div>
+            </div>
+            <div class="scoreBlock">
+                <div class="scoreLabel">fuel</div>
+                <div class="fuelBar"><span id="fuelBarprogress"></span></div>
             </div>
         </div>
     </div>

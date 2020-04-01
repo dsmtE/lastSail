@@ -2,11 +2,13 @@
 import * as THREE from 'three'
 import Stats from 'stats-js'
 
+import './css/game.css' // eslint-disable-line no-unused-vars
 // Objs
 import Boat from './objs/Boat'
 import Sky from './objs/Sky'
 import Sea from './objs/Sea'
 import RocksHandler from './objs/RocksHandler'
+import FuelsHandler from './objs/FuelHandler'
 
 // other
 import { isKeyDown } from './keyboardHandler'
@@ -17,18 +19,27 @@ let gameState
 let statsGui
 let scene, camera, renderer, clock, container, height, width
 let hemisphereLight, shadowLight, ambientLight
-let sea, sky, rocksHandler
+let sea, sky, rocksHandler, fuelsHandler
 let mousePos = { x: 0, y: 0 }
 
-window.addEventListener('load', init)
+// UI dom elemts
+let fuelBar, fieldDistance
 
-function init () {
+// this dosn't work .. execute twice initGame
+// window.addEventListener('load', init)
+window.onload = initGame
+
+function initGame () {
     console.log('----- init -----')
-
+    // console.trace()
     // init stats-js
     statsGui = new Stats()
     statsGui.showPanel(0)
     document.body.appendChild(statsGui.dom)
+
+    // UI dom
+    fieldDistance = document.getElementById('distanceValue')
+    fuelBar = document.getElementById('fuelBarprogress')
 
     clock = new THREE.Clock() // used tu get timeStamp and deltaTime
 
@@ -37,7 +48,8 @@ function init () {
     // init gameState variable
     gameState = {
         distance: 0,
-        score: 0,
+        fuel: 100,
+        ratioFuel: 0.06,
         ratioDistance: 1,
         maxBoatpos: 200,
         speed: 50,
@@ -45,18 +57,34 @@ function init () {
         seaLength: 800,
         seaLevel: -5,
         wavesAmp: 5,
-        SpawnPos: 800,
+        spawnPos: 800,
         rockDistanceTolerance: 30,
         CameraTargetPos: 0,
         CamMoveSensivity: 1
     }
-    gameState.boat = createBoat()
+
+    // createBoat
+    const boat = new Boat(gameState.maxBoatpos)
+    boat.mesh.position.z = 20
+    scene.add(boat.mesh)
+    gameState.boat = boat
+
     createLights() // add the lights
 
-    // add game objects
-    createSea()
-    createSky()
-    initRocksHandler()
+    // add game objectsn
+    // createSea
+    sea = new Sea()
+    sea.mesh.position.y = gameState.seaLevel
+    scene.add(sea.mesh) // add the mesh of the sea to the scene
+    // createSky
+    sky = new Sky(8, gameState.spawnPos)
+    scene.add(sky.mesh)
+    // initRocksHandler
+    rocksHandler = new RocksHandler(10, gameState)
+    scene.add(rocksHandler.mesh)
+    // initFuelsHandler
+    fuelsHandler = new FuelsHandler(gameState.spawnPos)
+    scene.add(fuelsHandler.mesh)
 
     // add event listener
     window.addEventListener('resize', handleWindowResize, false)
@@ -150,29 +178,6 @@ function createLights () {
     scene.add(ambientLight)
 }
 
-function createSea () {
-    sea = new Sea()
-    sea.mesh.position.y = gameState.seaLevel
-    scene.add(sea.mesh) // add the mesh of the sea to the scene
-}
-
-function createSky () {
-    sky = new Sky(8, gameState.SpawnPos)
-    scene.add(sky.mesh)
-}
-
-function createBoat () {
-    const boat = new Boat(gameState.maxBoatpos)
-    boat.mesh.position.z = 20
-    scene.add(boat.mesh)
-    return boat
-}
-
-function initRocksHandler () {
-    rocksHandler = new RocksHandler(10, gameState.SpawnPos, gameState.rockDistanceTolerance)
-    scene.add(rocksHandler.mesh)
-}
-
 function loop () {
     statsGui.begin()
 
@@ -197,17 +202,16 @@ function update () {
     gameState.boat.updateMovement(delta)
     sea.moveWaves(delta, time, gameState.speed)
     sky.update(delta, gameState.speed)
-    rocksHandler.update(delta, gameState.speed, gameState.boat)
-    updateDistance()
-    updateCamera(delta)
-}
-
-function updateDistance (delta) {
+    rocksHandler.update(delta, gameState)
+    fuelsHandler.update(delta, gameState)
+    // updateDistance
     gameState.distance += gameState.speed * delta * gameState.ratioDistance
-    // fieldDistance.innerHTML = Math.floor(game.distance)
-}
-
-function updateCamera (delta) {
+    fieldDistance.innerHTML = Math.floor(gameState.distance)
+    // update fuel
+    gameState.fuel -= gameState.speed * delta * gameState.ratioFuel
+    gameState.fuel = Math.max(0, gameState.fuel)
+    fuelBar.style.width = gameState.fuel + '%'
+    // updateCamera
     camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameState.CamMoveSensivity
     camera.fov = normalize(mousePos.y, -1, 1, 85, 100)
     camera.updateProjectionMatrix()
