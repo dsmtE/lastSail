@@ -1,5 +1,6 @@
 // libs
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import Stats from 'stats-js'
 
 import './css/game.css' // eslint-disable-line no-unused-vars
@@ -15,12 +16,15 @@ import { isKeyDown } from './keyboardHandler'
 import { normalize } from './useful'
 
 // variables
+
 let gameState
 let statsGui
 let scene, camera, renderer, clock, container, height, width
 let hemisphereLight, shadowLight, ambientLight
 let sea, sky, rocksHandler, fuelsHandler
 let mousePos = { x: 0, y: 0 }
+let gltfLoader
+const animations = []
 
 // UI dom elemts
 let fuelBar, fieldDistance
@@ -29,6 +33,38 @@ let fuelBar, fieldDistance
 // window.addEventListener('load', init)
 window.onload = initGame
 
+function loadingAssets () {
+    // init GLTF loader models
+    gltfLoader = new GLTFLoader()
+
+    gltfLoader.load(
+        // parameter 1: The URL
+        './assets/Stork.glb',
+        // parameter 2:The onLoad callback
+        (gltf, position) => { loadAsset(gltf) }
+        // parameter 3:The onProgress callback
+        // parameter 4:The onError callback
+    )
+}
+
+function loadAsset (gltf) {
+    console.log(gltf)
+    const model = gltf.scene.children[0]
+    model.position.set(20, 15, 20)
+    model.scale.set(0.1, 0.1, 0.1)
+
+    const animation = gltf.animations[0]
+
+    const mixer = new THREE.AnimationMixer(model)
+    animations.push(mixer)
+
+    const action = mixer.clipAction(animation)
+    action.play()
+
+    scene.add(model)
+
+}
+
 function initGame () {
     console.log('----- init -----')
     // console.trace()
@@ -36,7 +72,6 @@ function initGame () {
     statsGui = new Stats()
     statsGui.showPanel(0)
     document.body.appendChild(statsGui.dom)
-
     // UI dom
     fieldDistance = document.getElementById('distanceValue')
     fuelBar = document.getElementById('fuelBarprogress')
@@ -45,13 +80,15 @@ function initGame () {
 
     createScene() // set up the scene, the camera and the renderer
 
+    loadingAssets()
+
     // init gameState variable
     gameState = {
         distance: 0,
         fuel: 100,
-        ratioFuel: 0.06,
+        ratioFuel: 0.04,
         ratioDistance: 1,
-        maxBoatpos: 200,
+        maxBoatpos: 150,
         speed: 50,
         seaWidth: 600,
         seaLength: 800,
@@ -193,10 +230,14 @@ function update () {
     const delta = clock.getDelta()
     const time = clock.getElapsedTime()
 
+    for (const anim of animations) {
+        anim.update(delta)
+    }
+
     if (isKeyDown('ArrowLeft')) {
-        gameState.boat.increaseMovement(delta * Math.PI * 4)
+        gameState.boat.increaseMovement(delta * gameState.speed * Math.PI / 4)
     } else if (isKeyDown('ArrowRight')) {
-        gameState.boat.increaseMovement(delta * -Math.PI * 4)
+        gameState.boat.increaseMovement(delta * gameState.speed * -Math.PI / 4)
     }
 
     gameState.boat.updateMovement(delta)
@@ -208,7 +249,7 @@ function update () {
     gameState.distance += gameState.speed * delta * gameState.ratioDistance
     fieldDistance.innerHTML = Math.floor(gameState.distance)
     // update fuel
-    gameState.fuel -= gameState.speed * delta * gameState.ratioFuel
+    gameState.fuel -= gameState.speed * delta * gameState.ratioFu
     gameState.fuel = Math.max(0, gameState.fuel)
     fuelBar.style.width = gameState.fuel + '%'
     // updateCamera

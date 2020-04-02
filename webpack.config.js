@@ -1,6 +1,7 @@
 const webpack = require('webpack')
 const path = require('path')
 const HtmlWebPackPlugin = require("html-webpack-plugin");
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 const IS_DEV = process.env.NODE_ENV === "dev";
 
@@ -60,7 +61,10 @@ const config = {
     new HtmlWebPackPlugin({
       template: "src/index.html",
       filename: "index.html"
-    })
+    }),
+    new CopyWebpackPlugin([{
+      from: 'src/assets', to: 'assets'
+    }])
   ]
 }
 
