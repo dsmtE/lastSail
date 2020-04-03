@@ -11,7 +11,7 @@ export default class Matrix {
     }
 
     static fromArray (array) {
-        return new Matrix(array.length, 1).map((e, i) => array[i])
+        return new Matrix(1, array.length).map((_, i) => array[i])
     }
 
     randomize () { return this.randomize(this.cols, this.rows) }

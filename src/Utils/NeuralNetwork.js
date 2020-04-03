@@ -23,9 +23,9 @@ export default class NeuralNetwork {
     }
 
     forward (input) {
-        let out = input
+        let out = (input instanceof Matrix) ? input : Matrix.fromArray(input) // conversion in matrix
         for (let i = 0; i < this.weights.length; i++) {
-            out = out.dot(this.weights[i]).add(this.bias[i]).map(this.activations[i])
+            out = out.dot(this.weights[i]).add(this.bias[i]).map(this.activations[i]) // apply each layers
         }
         return out
     }
