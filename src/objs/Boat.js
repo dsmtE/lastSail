@@ -32,20 +32,30 @@ export default class Boat {
 
         this.velocity = 10
         this.dirAngle = 0
+        this.distance = 0
+        this.fuel = 100
         this.maxBoatpos = maxBoatpos
+        this.mesh.position.z = 20
+        this.rockTestcollisions = []
     }
 
     increaseMovement (deltaAngle) {
         this.dirAngle = boundValue(this.dirAngle + deltaAngle, -maxDirAngle, maxDirAngle)
     }
 
-    updateMovement (delta) {
+    update (delta, speed, ratioDistance, ratioFuel) {
+        // update fuel
+        this.fuel -= speed * delta * ratioFuel
+        this.fuel = Math.max(0, this.fuel)
+
+        // update distance
+        this.distance += speed * delta * ratioDistance
+
+        // updateMovement
         this.mesh.position.x = boundValue(this.mesh.position.x + delta * 100 * Math.sin(this.dirAngle), -this.maxBoatpos, this.maxBoatpos)
         this.dirAngle *= 0.97
-        this.updateModel()
-    }
 
-    updateModel () {
+        // update model display
         this.mesh.rotation.y = this.dirAngle / 8
     }
 

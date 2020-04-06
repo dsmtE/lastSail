@@ -17,25 +17,97 @@ import { normalize } from './useful'
 
 // variables
 
+const gameSettings = {
+    speed: 50,
+    ratioFuel: 0.04,
+    ratioDistance: 1,
+    seaSettings: {
+        seaWidth: 3000,
+        seaLength: 2000,
+        seaLevel: -5
+    },
+    maxBoatpos: 150,
+    CamMoveSensivity: 1,
+    spawnPos: 800
+}
+
 let gameState
 let statsGui
+// scene vars
 let scene, camera, renderer, clock, container, height, width
+const animations = [] // animations container for animated models
+// lights vars
 let hemisphereLight, shadowLight, ambientLight
+// game environment vars
 let sea, sky, rocksHandler, fuelsHandler
 let mousePos = { x: 0, y: 0 }
-let gltfLoader
-const animations = []
+const boats = [] // our entity container
+const displayBoatIndex = 0
 
-// UI dom elemts
+// UI dom elements
 let fuelBar, fieldDistance
 
 // this dosn't work .. execute twice initGame
 // window.addEventListener('load', init)
 window.onload = initGame
 
+function initGame () {
+    console.log('----- game init -----')
+    // console.trace()
+    // init stats-js
+    statsGui = new Stats()
+    statsGui.showPanel(0)
+    document.body.appendChild(statsGui.dom)
+    // UI dom
+    fieldDistance = document.getElementById('distanceValue')
+    fuelBar = document.getElementById('fuelBarprogress')
+
+    clock = new THREE.Clock() // used tu get timeStamp and deltaTime
+
+    createScene() // set up the scene, the camera and the renderer
+
+    loadingAssets()
+
+    // init gameState variable
+    gameState = {
+        CameraTargetPos: 0
+    }
+
+    // createBoat one entity
+    const boat = new Boat(gameSettings.maxBoatpos)
+    scene.add(boat.mesh)
+    boats.push(boat)
+
+    const boat2 = new Boat(gameSettings.maxBoatpos)
+    scene.add(boat2.mesh)
+    boats.push(boat2)
+
+    createLights() // add the lights
+
+    // add game objects
+    // createSea
+    sea = new Sea(gameSettings.seaSettings)
+    scene.add(sea.mesh) // add the mesh of the sea to the scene
+    // createSky
+    sky = new Sky(8, gameSettings.spawnPos)
+    scene.add(sky.mesh)
+    // initRocksHandler
+    rocksHandler = new RocksHandler(10, gameSettings.spawnPos)
+    scene.add(rocksHandler.mesh)
+    // initFuelsHandler
+    fuelsHandler = new FuelsHandler(gameSettings.spawnPos)
+    scene.add(fuelsHandler.mesh)
+
+    // add event listener
+    window.addEventListener('resize', handleWindowResize, false)
+    document.addEventListener('mousemove', handleMouseMove, false)
+
+    loop() // start loop
+}
+
 function loadingAssets () {
     // init GLTF loader models
-    gltfLoader = new GLTFLoader()
+    const gltfLoader = new GLTFLoader()
 
     gltfLoader.load(
         // parameter 1: The URL
@@ -65,71 +137,6 @@ function loadAsset (gltf) {
 
 }
 
-function initGame () {
-    console.log('----- init -----')
-    // console.trace()
-    // init stats-js
-    statsGui = new Stats()
-    statsGui.showPanel(0)
-    document.body.appendChild(statsGui.dom)
-    // UI dom
-    fieldDistance = document.getElementById('distanceValue')
-    fuelBar = document.getElementById('fuelBarprogress')
-
-    clock = new THREE.Clock() // used tu get timeStamp and deltaTime
-
-    createScene() // set up the scene, the camera and the renderer
-
-    loadingAssets()
-
-    // init gameState variable
-    gameState = {
-        distance: 0,
-        fuel: 100,
-        ratioFuel: 0.04,
-        ratioDistance: 1,
-        maxBoatpos: 150,
-        speed: 50,
-        seaWidth: 600,
-        seaLength: 800,
-        seaLevel: -5,
-        wavesAmp: 5,
-        spawnPos: 800,
-        rockDistanceTolerance: 30,
-        CameraTargetPos: 0,
-        CamMoveSensivity: 1
-    }
-
-    // createBoat
-    const boat = new Boat(gameState.maxBoatpos)
-    boat.mesh.position.z = 20
-    scene.add(boat.mesh)
-    gameState.boat = boat
-
-    createLights() // add the lights
-
-    // add game objectsn
-    // createSea
-    sea = new Sea()
-    sea.mesh.position.y = gameState.seaLevel
-    scene.add(sea.mesh) // add the mesh of the sea to the scene
-    // createSky
-    sky = new Sky(8, gameState.spawnPos)
-    scene.add(sky.mesh)
-    // initRocksHandler
-    rocksHandler = new RocksHandler(10, gameState)
-    scene.add(rocksHandler.mesh)
-    // initFuelsHandler
-    fuelsHandler = new FuelsHandler(gameState.spawnPos)
-    scene.add(fuelsHandler.mesh)
-
-    // add event listener
-    window.addEventListener('resize', handleWindowResize, false)
-    document.addEventListener('mousemove', handleMouseMove, false)
-
-    loop() // start loop
-}
-
 function createScene () {
     height = window.innerHeight
     width = window.innerWidth
@@ -137,11 +144,10 @@ function createScene () {
     // Create the scene
     scene = new THREE.Scene()
 
-    // Add a fog effect to the scene same color as the
-    // background color used in the style sheet
+    // Add fog effect with same color background
     scene.fog = new THREE.FogExp2(0xf7d9aa, 0.002)
 
-    // Create the camera
+    // camera
     const aspectRatio = width / height
     const fieldOfView = 90
     const nearPlane = 1
@@ -180,36 +186,31 @@ function handleWindowResize () {
 
 function createLights () {
     // A hemisphere light is a gradient colored light
-    // the first parameter is the sky color, the second parameter is the ground color,
-    // the third parameter is the intensity of the light
+    // first parameter is the sky color,
+    // second parameter is the ground color,
+    // third parameter is the intensity of the light
     hemisphereLight = new THREE.HemisphereLight(0xaaaaaa, 0x000000, .9)
 
-    // A directional light shines from a specific direction.
-    // It acts like the sun, that means that all the rays produced are parallel.
+    // A directional light with a specific direction for sun
     shadowLight = new THREE.DirectionalLight(0xffffff, .9)
-
-    // Set the direction of the light
     shadowLight.position.set(10, -5, 8)
-
-    // Allow shadow casting
     shadowLight.castShadow = true
 
-    // define the visible area of the projected shadow
+    // Define the visible area of the projected shadow
     shadowLight.shadow.camera.left = -400
     shadowLight.shadow.camera.right = 400
     shadowLight.shadow.camera.top = 400
     shadowLight.shadow.camera.bottom = -400
     shadowLight.shadow.camera.near = 1
     shadowLight.shadow.camera.far = 1000
-
-    // define the resolution of the shadow the higher the better,
-    // but also the more expensive and less performant
+    // Resolution of the shadow map
     shadowLight.shadow.mapSize.width = 1024
     shadowLight.shadow.mapSize.height = 1024
 
-    ambientLight = new THREE.AmbientLight(0xdc8874, .3) // an ambient light modifies the global color of a scene and makes the shadows softer
+    // Ambient light for softer shadows
+    ambientLight = new THREE.AmbientLight(0xdc8874, .3)
 
-    // to activate the lights, just add them to the scene
+    // Add to the scene
     scene.add(hemisphereLight)
     scene.add(shadowLight)
     scene.add(ambientLight)
@@ -218,7 +219,7 @@ function createLights () {
 function loop () {
     statsGui.begin()
 
-    update()
+    update() // global update function for the game
     renderer.render(scene, camera) // render the scene
 
     window.requestAnimationFrame(loop) // call the loop function again
@@ -230,30 +231,31 @@ function update () {
     const delta = clock.getDelta()
     const time = clock.getElapsedTime()
 
-    for (const anim of animations) {
-        anim.update(delta)
-    }
+    animations.forEach(anim => { anim.update(delta) }) // update animated model (test)
 
     if (isKeyDown('ArrowLeft')) {
-        gameState.boat.increaseMovement(delta * gameState.speed * Math.PI / 4)
+        boats[displayBoatIndex].increaseMovement(delta * gameSettings.speed * Math.PI / 4)
+        boats[1].increaseMovement(delta * gameSettings.speed * -Math.PI / 4)
     } else if (isKeyDown('ArrowRight')) {
-        gameState.boat.increaseMovement(delta * gameState.speed * -Math.PI / 4)
+        boats[displayBoatIndex].increaseMovement(delta * gameSettings.speed * -Math.PI / 4)
+        boats[1].increaseMovement(delta * gameSettings.speed * Math.PI / 4)
     }
 
-    gameState.boat.updateMovement(delta)
-    sea.moveWaves(delta, time, gameState.speed)
-    sky.update(delta, gameState.speed)
-    rocksHandler.update(delta, gameState)
-    fuelsHandler.update(delta, gameState)
-    // updateDistance
-    gameState.distance += gameState.speed * delta * gameState.ratioDistance
-    fieldDistance.innerHTML = Math.floor(gameState.distance)
-    // update fuel
-    gameState.fuel -= gameState.speed * delta * gameState.ratioFu
-    gameState.fuel = Math.max(0, gameState.fuel)
-    fuelBar.style.width = gameState.fuel + '%'
+    // update graphic environment
+    sea.moveWaves(delta, time, gameSettings.speed)
+    sky.update(delta, gameSettings.speed)
+
+    // update games objs handlers
+    rocksHandler.update(delta, gameSettings.speed, boats, displayBoatIndex)
+    // fuelsHandler.update(delta, gameState)
+    boats.forEach(b => { b.update(delta, gameSettings.speed, gameSettings.ratioDistance, gameSettings.ratioFuel) })
+
+    // update htmlDisplay
+    fieldDistance.innerHTML = Math.floor(boats[displayBoatIndex].distance)
+    fuelBar.style.width = boats[displayBoatIndex].fuel + '%'
+
     // updateCamera
-    camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameState.CamMoveSensivity
+    // camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameSettings.CamMoveSensivity
     camera.fov = normalize(mousePos.y, -1, 1, 85, 100)
     camera.updateProjectionMatrix()
 }

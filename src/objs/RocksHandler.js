@@ -30,61 +30,67 @@ class Rock {
 }
 
 export default class RocksHandler {
-    constructor (nbRocksInPool, gameState) {
+    constructor (nbRocksInPool, spawnPos) {
         this.mesh = new THREE.Object3D()
         this.activeRocks = []
         this.Rockspool = []
-        this.spawnPos = gameState.spawnPos
-        this.rockDistanceTolerance = gameState.rockDistanceTolerance
+        this.spawnPos = spawnPos
         for (let i = 0; i < nbRocksInPool; i++) {
             this.Rockspool.push(new Rock())
         }
     }
 
-    spawnRock (offset = 0) {
+    spawnRock (offset = 0, boats) {
         if (this.Rockspool.length) {
             const r = this.Rockspool.pop()
 
             // pos
             r.mesh.position.set(randInt(-1, 2) * 100, 0, this.spawnPos + offset * 80) //  + (offset > 0) * (Math.round() * 2 - 1) * 30)
-            // rotate
-            r.mesh.rotation.y = Math.random() * Math.PI
+            r.mesh.rotation.y = Math.random() * Math.PI // rotate
 
             this.activeRocks.push(r)
+            boats.forEach(b => { b.rockTestcollisions.push(true) })
             this.mesh.add(r.mesh) // add in scene
         }
     }
 
-    update (delta, gameState) {
+    update (delta, speed, boats, displayBoatIndex) {
         for (let i = 0; i < this.activeRocks.length; i++) { // for each rock
             const r = this.activeRocks[i]
             // move rock
-            r.mesh.position.z -= delta * gameState.speed
+            r.mesh.position.z -= delta * speed
 
-            if (r.mesh.position.z < -200) {
-                this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
+            if (r.mesh.position.z < -300) {
+                this.Rockspool.push(this.activeRocks.splice(i, 1)[0]) // add our rock to pool
+                boats.forEach(b => b.rockTestcollisions.splice(i, 1)[0]) // remove for our boat test collisions too
                 this.mesh.remove(r.mesh)
+
                 break
             }
 
-            if (r.getBoundingBox().intersectsBox(gameState.boat.getBoundingBox())) {
-                this.mesh.remove(r.mesh)
-                this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
-                // emmit particles
-                gameState.fuel = Math.max(0, gameState.fuel - 15) // reduce fuel
-                console.log('rock hit')
-            }
+            boats.forEach(b => { // for each boat
+                // console.log(b.rockTestcollisions)
+                if (b.rockTestcollisions[i] && r.getBoundingBox().intersectsBox(b.getBoundingBox())) {
+                    if (b === boats[displayBoatIndex]) { // remove mesh display only for displayed boat
+                        this.mesh.remove(r.mesh)
+                    }
+                    b.rockTestcollisions[i] = false // we doesn't check anymore the collision between the rock and this boat
+                    // this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
+                    b.fuel = Math.max(0, b.fuel - 15) // reduce fuel for this boat
+
+                    console.log('rock hit')
+                }
+            })
         }
 
         // spawn new rocks randomly
         const lastRock = last(this.activeRocks)
-        // console.log(lastRock)
         if (lastRock) {
             if (Math.abs(lastRock.mesh.position.z - this.spawnPos) > 300 && Math.random() > 0.4) {
-                for (let i = 0; i < randInt(0, 3); i++) { this.spawnRock(i) }
+                for (let i = 0; i < randInt(0, 3); i++) { this.spawnRock(i, boats) }
             }
         } else {
-            this.spawnRock(0)
+            this.spawnRock(0, boats)
         }
     }
 

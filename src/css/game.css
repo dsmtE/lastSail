@@ -70,7 +70,7 @@ body {
 	position: relative;
 	margin: 0 0 0.4em 0;
 	text-align: center;
-	color: #cab28d;
+	color: #aa9576;
 	font-size: 1em;
 	letter-spacing: 0.2em;
 	text-transform: uppercase;
@@ -82,7 +82,7 @@ body {
 .scoreValue {
 	font-family: 'Playfair Display';
 	font-weight: bold;
-	color: #cab28d;
+	color: #aa9576;
 }
 
 #distanceValue {

@@ -3,8 +3,9 @@ import SimplexNoise from 'simplex-noise'
 import Colors from '../Colors'
 
 export default class Sea {
-    constructor () {
-        this.size = { w: 3000, h: 2000 }
+    constructor (seaSettings) {
+
+        this.size = { w: seaSettings.seaWidth, h: seaSettings.seaLength }
         this.resolution = { w: 100, h: 200 }
         this.geometry = new THREE.PlaneGeometry(this.size.w - 1, this.size.h - 1, this.resolution.w, this.resolution.h)
         this.geometry.translate(0.5, 0, 0)
@@ -39,6 +40,8 @@ export default class Sea {
         this.mesh = new THREE.Mesh(this.geometry, mat)
         this.mesh.translateZ(this.size.h / 2.5)
         this.mesh.receiveShadow = true
+
+        this.mesh.position.y = seaSettings.seaLevel
     }
 
     moveWaves (delta, time, gameSpeed) {
