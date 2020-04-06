@@ -1,5 +1,27 @@
 import Matrix from './Matrix'
 
+const activationsFunctions = {
+	relu: function (x) {
+		if (x > 0) return x
+		else return 0
+	},
+	tanh: function (x) {
+		return Math.tanh(x)
+	},
+	sigmoid: function (x) {
+		return (1 / (1 + Math.exp(-x)))
+	},
+	leakyRelu: function (x) {
+		if (x > 0) return x
+		else return (x * 0.01)
+	},
+	softmax: function (x, id, array) {
+		let sum = 0
+        array.forEach(e => sum += Math.exp(e))
+		return Math.exp(x) / sum
+	}
+}
+
 export default class NeuralNetwork {
     constructor (layersSizes, activationFunct) {
         // case copy constructor
