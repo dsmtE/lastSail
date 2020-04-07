@@ -1,36 +1,31 @@
 import Matrix from './Matrix'
+import { assert } from './useful'
 
-const activationsFunctions = {
-	relu: function (x) {
-		if (x > 0) return x
-		else return 0
-	},
-	tanh: function (x) {
-		return Math.tanh(x)
-	},
-	sigmoid: function (x) {
-		return (1 / (1 + Math.exp(-x)))
-	},
-	leakyRelu: function (x) {
-		if (x > 0) return x
-		else return (x * 0.01)
-	},
-	softmax: function (x, id, array) {
-		let sum = 0
-        array.forEach(e => sum += Math.exp(e))
-		return Math.exp(x) / sum
-	}
+export const activationsFunctions = {
+    relu: x => (x > 0) ? x : 0,
+    tanh: x => Math.tanh(x),
+    sigmoid: x => 1 / (1 + Math.exp(-x)),
+    centeredSigmoid: x => 2 / (1 + Math.exp(-x)) - 1,
+    leakyRelu: x => (x > 0) ? x : x * 0.01,
+    softmax: function (x, i, j, array) {
+        assert(array.length === 1, 'softmax can only be applied on array')
+        let sum = 0
+        array[0].forEach(e => { sum += Math.exp(e) })
+        return Math.exp(x) / sum
+    }
 }
 
-export default class NeuralNetwork {
+export class NeuralNetwork {
+
     constructor (layersSizes, activationFunct) {
-        // case copy constructor
+        // case copy constructor, a bit weird, I guess... ^^
         if (layersSizes instanceof NeuralNetwork) {
             this.weights = layersSizes.wweights.copy()
             this.bias = layersSizes.bias.copy()
             this.activations = layersSizes.activations
+            this.layersSizes = layersSizes.layersSizes
         } else {
-
+            assert(activationFunct.length === layersSizes.length - 1)
             this.weights = []
             this.bias = []
             this.activations = activationFunct

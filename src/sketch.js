@@ -2,6 +2,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import Stats from 'stats-js'
+import { NeuralNetwork } from '../Utils/NeuralNetwork'
 
 import './css/game.css' // eslint-disable-line no-unused-vars
 // Objs
@@ -13,12 +14,12 @@ import FuelsHandler from './objs/FuelHandler'
 
 // other
 import { isKeyDown } from './keyboardHandler'
-import { normalize } from './useful'
+import { normalize } from './Utils/useful'
 
 // variables
 
 const gameSettings = {
-    speed: 50,
+    speed: 100,
     ratioFuel: 0.04,
     ratioDistance: 1,
     seaSettings: {
@@ -28,9 +29,11 @@ const gameSettings = {
     },
     maxBoatpos: 150,
     CamMoveSensivity: 1,
-    spawnPos: 800
+    spawnPos: 800,
+    entitiesByGenerations: 20
 }
 
+let results
 let gameState
 let statsGui
 // scene vars
@@ -42,7 +45,7 @@ let hemisphereLight, shadowLight, ambientLight
 let sea, sky, rocksHandler, fuelsHandler
 let mousePos = { x: 0, y: 0 }
 const boats = [] // our entity container
-const displayBoatIndex = 0
+let displayBoatIndex
 
 // UI dom elements
 let fuelBar, fieldDistance
@@ -70,17 +73,17 @@ function initGame () {
 
     // init gameState variable
     gameState = {
-        CameraTargetPos: 0
+        CameraTargetPos: 0,
+        pause: false
     }
 
-    // createBoat one entity
-    const boat = new Boat(gameSettings.maxBoatpos)
-    scene.add(boat.mesh)
-    boats.push(boat)
-
-    const boat2 = new Boat(gameSettings.maxBoatpos)
-    scene.add(boat2.mesh)
-    boats.push(boat2)
+    displayBoatIndex = 0
+    // createBoat entities
+    for (let i = 0; i < gameSettings.entitiesByGenerations; i++) {
+        boats.push(new Boat(gameSettings.maxBoatpos))
+        // scene.add(boat.mesh)
+    }
+    scene.add(boats[displayBoatIndex].mesh)
 
     createLights() // add the lights
 
@@ -120,7 +123,6 @@ function loadingAssets () {
 }
 
 function loadAsset (gltf) {
-    console.log(gltf)
     const model = gltf.scene.children[0]
     model.position.set(20, 15, 20)
     model.scale.set(0.1, 0.1, 0.1)
@@ -219,45 +221,91 @@ function createLights () {
 function loop () {
     statsGui.begin()
 
-    update() // global update function for the game
+    if (isKeyDown('Space')) {
+        gameState.pause = !gameState.pause
+        console.log(results)
+    }
+
+    if (!gameState.pause) {
+        update() // global update function for the game
+    }
     renderer.render(scene, camera) // render the scene
 
-    window.requestAnimationFrame(loop) // call the loop function again
     statsGui.end()
+    window.requestAnimationFrame(loop) // call the loop function again
+}
+
+function newGeneration () {
+    // natural selection
+    const maxFitness = Math.max(...boats.map( b => b.fitness()))
+    newBoats = []
+    let a, b, child
+    while (newBoats.length < gameSettings.entitiesByGenerations) {
+        a = boats[Math.floor(Math.random() * boats.length)] // pick random one
+        b = boats[Math.floor(Math.random() * boats.length)] // pick another one
+        child = new boats(gameSettings.maxBoatpos, NeuralNetwork.crossOver(a.brain, b.brain))
+    }
+
 }
 
 function update () {
 
     const delta = clock.getDelta()
     const time = clock.getElapsedTime()
+    const boatsAlive = boats.filter(b => b.alive())
 
-    animations.forEach(anim => { anim.update(delta) }) // update animated model (test)
+    if (boatsAlive.length === 0) { // if there are still alive boats
+        console.log('all dead')
+        gameState.pause = true
+    } else {
 
-    if (isKeyDown('ArrowLeft')) {
-        boats[displayBoatIndex].increaseMovement(delta * gameSettings.speed * Math.PI / 4)
-        boats[1].increaseMovement(delta * gameSettings.speed * -Math.PI / 4)
-    } else if (isKeyDown('ArrowRight')) {
-        boats[displayBoatIndex].increaseMovement(delta * gameSettings.speed * -Math.PI / 4)
-        boats[1].increaseMovement(delta * gameSettings.speed * Math.PI / 4)
+        // if (isKeyDown('ArrowLeft')) {
+        //     boats[displayBoatIndex].moveLeft(delta, gameSettings.speed)
+        // } else if (isKeyDown('ArrowRight')) {
+        //     boats[displayBoatIndex].moveRight(delta, gameSettings.speed)
+        // }
+
+        if (!boats[displayBoatIndex].alive()) { // if our displayed boats dead
+            scene.remove(boats[displayBoatIndex].mesh) // remove from our scene
+            // change displayed boat inded ( find new one)
+            for (let i = 0; i < boats.length; i++) {
+                if (boats[i].alive() && i !== displayBoatIndex) {
+                    displayBoatIndex = i
+                    scene.add(boats[displayBoatIndex].mesh)
+                    break
+                }
+            }
+        }
+
+        boatsAlive.forEach(b => {
+            const lastFuel = fuelsHandler.getLast()
+            const lastRock = rocksHandler.getLast()
+            if (lastFuel && lastRock) {
+                b.takeDecisionAndMove(fuelsHandler.getLast(), rocksHandler.getLast(), delta, gameSettings.speed)
+            }
+        })
+
+        // update games objs handlers
+        rocksHandler.update(delta, gameSettings.speed, boatsAlive, displayBoatIndex)
+        fuelsHandler.update(delta, gameSettings.speed, boatsAlive, displayBoatIndex)
+        boats.forEach(b => { b.update(delta, gameSettings.speed, gameSettings.ratioDistance, gameSettings.ratioFuel) })
+
+        // update htmlDisplay
+        fieldDistance.innerHTML = Math.floor(boats[displayBoatIndex].distance)
+        fuelBar.style.width = boats[displayBoatIndex].fuel + '%'
+
+        animations.forEach(anim => { anim.update(delta) }) // update animated model (test)
+
+        // update graphic environment
+        sea.moveWaves(delta, time, gameSettings.speed)
+        sky.update(delta, gameSettings.speed)
+
+        // updateCamera
+        // camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameSettings.CamMoveSensivity
+        camera.fov = normalize(mousePos.y, -1, 1, 85, 100)
+        camera.updateProjectionMatrix()
     }
 
-    // update graphic environment
-    sea.moveWaves(delta, time, gameSettings.speed)
-    sky.update(delta, gameSettings.speed)
-
-    // update games objs handlers
-    rocksHandler.update(delta, gameSettings.speed, boats, displayBoatIndex)
-    // fuelsHandler.update(delta, gameState)
-    boats.forEach(b => { b.update(delta, gameSettings.speed, gameSettings.ratioDistance, gameSettings.ratioFuel) })
-
-    // update htmlDisplay
-    fieldDistance.innerHTML = Math.floor(boats[displayBoatIndex].distance)
-    fuelBar.style.width = boats[displayBoatIndex].fuel + '%'
-
-    // updateCamera
-    // camera.position.x += (-gameState.CameraTargetPos - camera.position.x) * delta * gameSettings.CamMoveSensivity
-    camera.fov = normalize(mousePos.y, -1, 1, 85, 100)
-    camera.updateProjectionMatrix()
 }
 
 function handleMouseMove (event) {

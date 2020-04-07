@@ -2,8 +2,12 @@ export default class Matrix {
     constructor (rows, cols) {
         this.rows = rows
         this.cols = cols
-        this.data = Array(this.rows).map(() => Array(this.cols).fill(0))
+        this.data = new Array(this.rows).fill(0).map(() => new Array(this.cols).fill(0))
         return this
+    }
+
+    shape () {
+        return [this.rows, this.cols]
     }
 
     copy () {
@@ -18,9 +22,10 @@ export default class Matrix {
     static randomize (cols, rows) { return new Matrix(cols, rows).map(e => Math.random() * 2 - 1) }
 
     map (funct) {
+
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.cols; j++) {
-                this.data[i][j] = funct(this.data[i][j], i, j)
+                this.data[i][j] = funct(this.data[i][j], i, j, this.data)
             }
         }
         return this
@@ -31,20 +36,20 @@ export default class Matrix {
     applyWiseFunctwith (m, funct) {
         if (m instanceof Matrix) {
             if (this.rows !== m.rows || this.cols !== m.cols) {
-                console.log('Columns and Rows of A must match Columns and Rows of B.')
+                console.log('Columns and Rows of A must match Columns and Rows of B. (', this.shape(), '!=', m.shape())
                 return
             }
-            return new Matrix(this.cols, this.rows).map((_, i, j) => funct(this.data[i][j], m.data[i][j]))
+            return new Matrix(this.rows, this.cols).map((_, i, j) => funct(this.data[i][j], m.data[i][j]))
         } else {
-            return new Matrix(this.cols, this.rows).map(e => funct(e, m))
+            return new Matrix(this.rows, this.cols).map(e => funct(e, m))
         }
     }
 
-    sub (m) { this.applyWiseFunctwith(m, (a, b) => a - b) }
+    sub (m) { return this.applyWiseFunctwith(m, (a, b) => a - b) }
 
     static sub (a, b) { return a.sub(b) }
 
-    add (m) { this.applyWiseFunctwith(m, (a, b) => a + b) }
+    add (m) { return this.applyWiseFunctwith(m, (a, b) => a + b) }
 
     static add (a, b) { return a.add(b) }
 
@@ -59,11 +64,11 @@ export default class Matrix {
 
     dot (m) {
         if (this.cols !== m.rows) {
-            console.log('rows of m must match Cols')
+            console.log('cols of m must match rows (', this.shape(), '!=', m.shape())
             return
         }
 
-        return new Matrix(this.rows, this.cols).map((e, i, j) => {
+        return new Matrix(this.rows, m.cols).map((e, i, j) => {
             let sum = 0
             for (let k = 0; k < this.cols; k++) {
                 sum += this.data[i][k] * m.data[k][j]

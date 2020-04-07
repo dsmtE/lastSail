@@ -1,11 +1,12 @@
 import * as THREE from 'three'
 import Colors from '../Colors'
-import { boundValue } from '../useful'
+import { boundValue } from '../Utils/useful'
+import { activationsFunctions, NeuralNetwork } from '../Utils/NeuralNetwork'
 
 const maxDirAngle = Math.PI / 4
 export default class Boat {
 
-    constructor (maxBoatpos) {
+    constructor (maxBoatpos, brain) {
 
         this.mesh = new THREE.Object3D()
 
@@ -34,13 +35,60 @@ export default class Boat {
         this.dirAngle = 0
         this.distance = 0
         this.fuel = 100
+        this.rocksHit = 0
+        this.refuelTaken = 0
         this.maxBoatpos = maxBoatpos
         this.mesh.position.z = 20
         this.rockTestcollisions = []
+        this.fuelTestcollisions = []
+        if (brain) {
+            this.brain = brain
+        }else {
+            this.brain = new NeuralNetwork([6, 4, 4, 3, 1], [activationsFunctions.leakyRelu, activationsFunctions.leakyRelu, activationsFunctions.leakyRelu, activationsFunctions.tanh])
+        }
+    }
+
+    fitness () {
+        return Math.pow(this.distance, 2) + Math.pow(refuelTaken * 10, 2) - Math.pow(rocksHit, 3)
+    }
+    alive () {
+        return this.fuel > 0
     }
 
     increaseMovement (deltaAngle) {
         this.dirAngle = boundValue(this.dirAngle + deltaAngle, -maxDirAngle, maxDirAngle)
+    }
+
+    moveLeft (delta, speed) {
+        this.increaseMovement(delta * speed * Math.PI / 400)
+    }
+
+    moveRight (delta, speed) {
+        this.increaseMovement(-delta * speed * Math.PI / 400)
+    }
+
+    takeDecisionAndMove (lastFuel, lastRock, delta, speed) {
+        const out = this.takeDecision(lastFuel, lastRock)
+        // this.dirAngle = out * maxDirAngle
+        if (Math.abs(out) > 0.3) {
+            if (out > 0) {
+                this.moveLeft(delta, speed)
+            } else {
+                this.moveRight(delta, speed)
+            }
+        }
+    }
+
+    takeDecision (lastFuel, lastRock) {
+        const input = [
+            (this.mesh.position.x - lastRock.mesh.position.x) / this.maxBoatpos,
+            (this.mesh.position.y - lastRock.mesh.position.y) / this.maxBoatpos,
+            (this.mesh.position.x - lastFuel.mesh.position.x) / this.maxBoatpos,
+            (this.mesh.position.y - lastFuel.mesh.position.y) / this.maxBoatpos,
+            this.maxBoatpos - this.mesh.position.x,
+            this.fuel / 100
+        ]
+        return this.brain.forward(input).data[0]
     }
 
     update (delta, speed, ratioDistance, ratioFuel) {
@@ -52,8 +100,8 @@ export default class Boat {
         this.distance += speed * delta * ratioDistance
 
         // updateMovement
-        this.mesh.position.x = boundValue(this.mesh.position.x + delta * 100 * Math.sin(this.dirAngle), -this.maxBoatpos, this.maxBoatpos)
-        this.dirAngle *= 0.97
+        this.mesh.position.x = boundValue(this.mesh.position.x + delta * speed * 2 * Math.sin(this.dirAngle), -this.maxBoatpos, this.maxBoatpos)
+        this.dirAngle *= 0.972
 
         // update model display
         this.mesh.rotation.y = this.dirAngle / 8

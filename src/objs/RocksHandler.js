@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import Colors from '../Colors'
-import { randInt, last } from '../useful'
+import { randInt, last } from '../Utils/useful'
 
 class Rock {
     constructor () {
@@ -54,17 +54,20 @@ export default class RocksHandler {
         }
     }
 
+    getLast () {
+        return last(this.activeRocks)
+    }
+
     update (delta, speed, boats, displayBoatIndex) {
         for (let i = 0; i < this.activeRocks.length; i++) { // for each rock
             const r = this.activeRocks[i]
             // move rock
             r.mesh.position.z -= delta * speed
 
-            if (r.mesh.position.z < -300) {
+            if (r.mesh.position.z < -200) {
                 this.Rockspool.push(this.activeRocks.splice(i, 1)[0]) // add our rock to pool
                 boats.forEach(b => b.rockTestcollisions.splice(i, 1)[0]) // remove for our boat test collisions too
                 this.mesh.remove(r.mesh)
-
                 break
             }
 
@@ -75,10 +78,10 @@ export default class RocksHandler {
                         this.mesh.remove(r.mesh)
                     }
                     b.rockTestcollisions[i] = false // we doesn't check anymore the collision between the rock and this boat
+                    b.rocksHit++
                     // this.Rockspool.push(this.activeRocks.splice(i, 1)[0])
                     b.fuel = Math.max(0, b.fuel - 15) // reduce fuel for this boat
-
-                    console.log('rock hit')
+                    // console.log('rock hit')
                 }
             })
         }

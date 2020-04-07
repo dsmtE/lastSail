@@ -9,3 +9,13 @@ export const last = array => array[array.length - 1]
 export const boundValue = (value, min, max) => Math.max(Math.min(value, max), min)
 
 export const randInt = (min = 0, max) => Math.floor(Math.random() * (max - min)) + min
+
+export const assert = (condition, message) => {
+    if (!condition) {
+        message = message || 'Assertion failed'
+        if (typeof Error !== 'undefined') {
+            throw new Error(message)
+        }
+        throw message // Fallback
+    }
+}

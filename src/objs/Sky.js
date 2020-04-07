@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import Cloud from './Cloud'
-import { last } from '../useful'
+import { last } from '../Utils/useful'
 
 export default class Sky {
     constructor (nbClouds, cloudsSpawnPos) {
